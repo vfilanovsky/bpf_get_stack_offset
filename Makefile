@@ -14,7 +14,7 @@ INCLUDES := -I$(OUTPUT) -Ilibbpf/include/uapi
 CFLAGS := -g -Wall
 ARCH := $(shell uname -m | sed 's/x86_64/x86/')
 
-APPS = get_fs_offset
+APPS = get_stack_offset
 
 # Get Clang's default includes on this system. We'll explicitly add these dirs
 # to the includes list when compiling with `-target bpf` because otherwise some
