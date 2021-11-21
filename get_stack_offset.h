@@ -31,7 +31,7 @@
 
 #include <linux/types.h>
 
-#define MAX_TASK_STRUCT 0x2000  // chosen arbitrarily, I think it'll be enough
+#define MAX_TASK_STRUCT 0x4000  // chosen arbitrarily, I think it'll be enough
 
 #define STATUS_OK 0
 #define STATUS_ERROR 1

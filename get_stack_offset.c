@@ -28,6 +28,7 @@
 #include <errno.h>
 
 #include <bpf/libbpf.h>
+#include <bpf/bpf.h>
 #include "get_stack_offset.skel.h"
 #include "get_stack_offset.h"
 
@@ -47,8 +48,6 @@ int main(int argc, const char *argv[]) {
         return 1;
     }
 
-    obj->bss->expected_tid = syscall(__NR_gettid);
-
     int err = get_stack_offset_bpf__load(obj);
     if (err) {
         fprintf(stderr, "failed to load BPF object: %d\n", err);
@@ -61,12 +60,26 @@ int main(int argc, const char *argv[]) {
         goto out;
     }
 
+    const __u32 zero = 0;
+    int progs_fd = bpf_map__fd(obj->maps.progs);
+    __u32 prog_fd = bpf_program__fd(obj->progs.do_write);
+    if ((err = bpf_map_update_elem(progs_fd, &zero, &prog_fd, BPF_ANY)) < 0) {
+        fprintf(stderr, "failed to insert program entry: %d (prog fd: %d)\n", err, prog_fd);
+        goto out;
+    }
+
+    const __u32 tid = syscall(__NR_gettid);
+    int tid_map_fd = bpf_map__fd(obj->maps.tid_map);
+    if ((err = bpf_map_update_elem(tid_map_fd, &tid, &zero, BPF_NOEXIST)) < 0) {
+        fprintf(stderr, "failed to insert TID entry: %d\n", err);
+        goto out;
+    }
+
     // trigger the program; the 2 values (passed in rsi & rdx) will be kept on the stack
     // in pt_regs, and the program will search for them.
     write(-1, (void*)SI_VALUE, DX_VALUE);
 
     int fd = bpf_map__fd(obj->maps.output);
-    const __u8 zero = 0;
     struct output output;
     if ((err = bpf_map_lookup_elem(fd, &zero, &output)) < 0) {
         fprintf(stderr, "failed to lookup output map: %d\n", err);
