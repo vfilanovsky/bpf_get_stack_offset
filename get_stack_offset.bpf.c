@@ -92,18 +92,6 @@ int do_write(struct pt_regs *ctx)
         base = 0; // first call
         out.offset = 0;
         out.status = STATUS_NOTFOUND;
-    } else {
-        base = *index_ptr;
-
-        struct output *prev = bpf_map_lookup_elem(&output, &zero);
-        if (prev == NULL) {
-            // it's an error - we found a previous index but not a previous output struct?
-            out.offset = 0;
-            out.status = STATUS_ERROR;
-            goto out;
-        }
-        out.offset = prev->offset;
-        out.status = prev->status;
     }
 
     const __u64 *current = (__u64*)bpf_get_current_task();
