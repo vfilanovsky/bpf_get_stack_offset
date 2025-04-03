@@ -24,7 +24,7 @@
 
 #include <linux/bpf.h>
 #include <linux/types.h>
-#include "vmlinux.h"
+#include <linux/sched.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_core_read.h>
 
@@ -76,6 +76,11 @@ struct {
    __type(value, __u32);
 } progs SEC(".maps");
 
+struct task_struct___a {
+	void *stack;
+} __attribute__((preserve_access_index));
+
+
 SEC("tp/syscalls/sys_enter_write")
 int do_write(struct pt_regs *ctx)
 {
@@ -98,7 +103,7 @@ int do_write(struct pt_regs *ctx)
     //struct task_struct *current = bpf_get_current_task();
 
     //out.offset = bpf_core_field_offset(current->stack);
-    out.offset = bpf_core_field_offset(struct task_struct, stack);
+    out.offset = bpf_core_field_offset(struct task_struct___a, stack);
     out.status = STATUS_OK;
     bpf_map_update_elem(&output, &zero, &out, BPF_ANY);
 
