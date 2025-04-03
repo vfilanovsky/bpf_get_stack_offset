@@ -107,72 +107,8 @@ int do_write(struct pt_regs *ctx)
 
     const __u64 *current = (__u64*)bpf_get_current_task();
 
-    #pragma unroll
-    for (unsigned int i = 0; i < ITERS_PER_PROG; i++) {
-        __u64 *maybe_stack;
-        int err = bpf_probe_read(&maybe_stack, sizeof(__u64), &current[base + i]);
-        if (err != 0) {
-            out.status = STATUS_ERROR;
-            out.offset = err;
-            goto out;
-        }
-
-        // make sure it's canonical (and in kernel space), otherwise we might get a WARN_ONCE
-        // (see ex_handler_uaccess() in the kernel, happens on 5.4).
-        if ((unsigned long)maybe_stack <= MIN_CANONICAL_KERNEL_ADDRESS) {
-            continue;
-        }
-
-        // implementing task_pt_regs() for x86_64 here.
-        struct pt_regs *regs = (struct pt_regs*)((unsigned long)maybe_stack + THREAD_SIZE - TOP_OF_KERNEL_STACK_PADDING) - 1;
-
-        __u64 pt_regs_si;
-        __u64 pt_regs_dx;
-        // ignore errors, "pointer" may not be a pointer at all.
-        (void)bpf_probe_read(&pt_regs_si, sizeof(pt_regs_si), &regs->si);
-        (void)bpf_probe_read(&pt_regs_dx, sizeof(pt_regs_dx), &regs->dx);
-
-        if (pt_regs_si== SI_VALUE && pt_regs_dx == DX_VALUE) {
-            if (out.status != STATUS_NOTFOUND) {
-                out.status = STATUS_DUP;
-                goto out;
-            }
-
-            out.offset = (base + i) * sizeof(__u64);
-            out.status = STATUS_OK;
-            // continue searching, check for dups
-        }
-    }
-
-    if (base + ITERS_PER_PROG < TOTAL_ITERS) {
-        // tail call
-        base += ITERS_PER_PROG;
-        int err = bpf_map_update_elem(&index_map, &zero, &base, BPF_ANY);
-        if (err != 0) {
-            out.status = STATUS_ERROR;
-            out.offset = err;
-            goto out;
-        }
-
-        err = bpf_map_update_elem(&output, &zero, &out, BPF_ANY);
-        if (err != 0) {
-            // :shrug:, next step ain't going to work anyway
-            out.status = STATUS_ERROR;
-            out.offset = err;
-            goto out;
-        }
-
-        bpf_tail_call(ctx, &progs, 0);
-        // if this call returns, it's an error.
-        // oddly enough, the verifier wouldn't let me use the return value here...
-        // (getting 'R0 !read_ok' for the next instruction after the call)
-        // so I'm putting 0
-        out.offset = 0;
-        out.status = STATUS_ERROR;
-        goto out;
-    }
-
-out:
+    out.offset = offsetof(struct task_struct, stack);
+    out.status = STATUS_OK;
     bpf_map_update_elem(&output, &zero, &out, BPF_ANY);
 
     return 0;
