@@ -108,7 +108,7 @@ int do_write(struct pt_regs *ctx)
 
     const __u64 *current = (__u64*)bpf_get_current_task();
 
-    out.offset = offsetof(task_struct, stack);
+    out.offset = offsetof(struct task_struct, stack);
     out.status = STATUS_OK;
     bpf_map_update_elem(&output, &zero, &out, BPF_ANY);
 
