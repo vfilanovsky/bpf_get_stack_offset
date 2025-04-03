@@ -26,7 +26,7 @@
 #include <linux/types.h>
 #include <linux/sched.h>
 #include <bpf/bpf_helpers.h>
-#include <bpf/bpf_core.h>
+#include <bpf/bpf_core_read.h>
 
 #include "get_stack_offset.h"
 
