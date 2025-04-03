@@ -24,6 +24,7 @@
 
 #include <linux/bpf.h>
 #include <bpf/bpf_helpers.h>
+#include <bpf/bpf_core.h>
 #include <linux/types.h>
 #include <linux/sched.h>
 
@@ -94,9 +95,10 @@ int do_write(struct pt_regs *ctx)
         out.status = STATUS_NOTFOUND;
     }
 
-    struct task_struct *current = bpf_get_current_task();
+    // struct task_struct *current = bpf_get_current_task();
 
-    out.offset = bpf_core_field_offset(current->stack);
+    // out.offset = bpf_core_field_offset(current->stack);
+    out.offset = bpf_core_field_offset(struct task_struct, stack);
     out.status = STATUS_OK;
     bpf_map_update_elem(&output, &zero, &out, BPF_ANY);
 
