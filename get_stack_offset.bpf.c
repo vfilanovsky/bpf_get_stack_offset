@@ -50,7 +50,7 @@ int do_write(struct pt_regs *ctx)
     struct output out;
     const __u32 zero = 0;
     out.offset = 0;
-    out.status = STATUS_NOTFOUND;
+    out.status = STATUS_ERROR;
 
     out.offset = bpf_core_field_offset(struct task_struct___a, stack);
     if (out.offset >= 0 )
