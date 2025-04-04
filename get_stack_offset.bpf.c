@@ -24,21 +24,10 @@
 
 #include <linux/bpf.h>
 #include <linux/types.h>
-#include <linux/sched.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_core_read.h>
 
 #include "get_stack_offset.h"
-
-
-#define NUM_TAIL_CALLS 26
-#define TOTAL_ITERS (MAX_TASK_STRUCT / sizeof(__u64))
-#define ITERS_PER_PROG (TOTAL_ITERS / NUM_TAIL_CALLS)
-
-// this is correct for x86_64 unless 5-level page tables are enabled (in which case, the address
-// is lower, but I don't think we'll encounter it any time soon)
-// this is 0xffff800000000000, see "Canonical form addresses" in https://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details
-#define MIN_CANONICAL_KERNEL_ADDRESS (~1UL - ((1UL << 47) - 2))
 
 // key - zero
 // value - struct output
@@ -49,34 +38,8 @@ struct {
     __type(value, struct output);
 } output SEC(".maps");
 
-// key - tid
-// value - don't care, merely checking for existence
-struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __uint(max_entries, 1);
-    __type(key, __u32);
-    __type(value, __u32);
-} tid_map SEC(".maps");
-
-// key - zero
-// value - current index into the task_struct
-// only one entry because only one thread should reach the point that it's using this map.
-struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __uint(max_entries, 1);
-    __type(key, __u32);
-    __type(value, __u32);
-} index_map SEC(".maps");
-
-// program array, to tail call into our program for "loops".
-struct {
-   __uint(type, BPF_MAP_TYPE_PROG_ARRAY);
-   __uint(max_entries, 1);
-   __type(key, __u32);
-   __type(value, __u32);
-} progs SEC(".maps");
-
-struct task_struct___a {
+// see https://nakryiko.com/posts/bpf-core-reference-guide/#defining-own-co-re-relocatable-type-definitions
+struct task_struct {
 	void *stack;
 } __attribute__((preserve_access_index));
 
@@ -84,27 +47,14 @@ struct task_struct___a {
 SEC("tp/syscalls/sys_enter_write")
 int do_write(struct pt_regs *ctx)
 {
-    const __u32 tid = (__u32)bpf_get_current_pid_tgid();
-    void *val = bpf_map_lookup_elem(&tid_map, &tid);
-    if (val == NULL) {
-        return 0;
-    }
-
     struct output out;
     const __u32 zero = 0;
-    unsigned int base;
-    __u32 *index_ptr = bpf_map_lookup_elem(&index_map, &zero);
-    if (index_ptr == NULL) {
-        base = 0; // first call
-        out.offset = 0;
-        out.status = STATUS_NOTFOUND;
-    }
+    out.offset = 0;
+    out.status = STATUS_NOTFOUND;
 
-    //struct task_struct *current = bpf_get_current_task();
-
-    //out.offset = bpf_core_field_offset(current->stack);
     out.offset = bpf_core_field_offset(struct task_struct___a, stack);
-    out.status = STATUS_OK;
+    if (out.offset >= 0 )
+        out.status = STATUS_OK;
     bpf_map_update_elem(&output, &zero, &out, BPF_ANY);
 
     return 0;
