@@ -61,6 +61,7 @@ int main(int argc, const char *argv[]) {
     }
 
     const __u32 zero = 0;
+/*
     int progs_fd = bpf_map__fd(obj->maps.progs);
     __u32 prog_fd = bpf_program__fd(obj->progs.do_write);
     if ((err = bpf_map_update_elem(progs_fd, &zero, &prog_fd, BPF_ANY)) < 0) {
@@ -74,7 +75,7 @@ int main(int argc, const char *argv[]) {
         fprintf(stderr, "failed to insert TID entry: %d\n", err);
         goto out;
     }
-
+*/
     // trigger the program; the 2 values (passed in rsi & rdx) will be kept on the stack
     // in pt_regs, and the program will search for them.
     write(-1, (void*)SI_VALUE, DX_VALUE);
