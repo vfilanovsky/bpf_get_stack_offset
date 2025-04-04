@@ -60,8 +60,8 @@ int main(int argc, const char *argv[]) {
         goto out;
     }
 
-/*
     const __u32 zero = 0;
+/*
     int progs_fd = bpf_map__fd(obj->maps.progs);
     __u32 prog_fd = bpf_program__fd(obj->progs.do_write);
     if ((err = bpf_map_update_elem(progs_fd, &zero, &prog_fd, BPF_ANY)) < 0) {
