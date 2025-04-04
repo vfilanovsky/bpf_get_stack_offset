@@ -52,7 +52,7 @@ int do_write(struct pt_regs *ctx)
     out.offset = 0;
     out.status = STATUS_ERROR;
 
-    out.offset = bpf_core_field_offset(struct task_struct___a, stack);
+    out.offset = bpf_core_field_offset(struct task_struct, stack);
     if (out.offset >= 0 )
         out.status = STATUS_OK;
     bpf_map_update_elem(&output, &zero, &out, BPF_ANY);
